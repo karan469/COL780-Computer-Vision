@@ -3,7 +3,7 @@
 
 import numpy as np
 import cv2
-cap = cv2.VideoCapture('1.mp4')
+cap = cv2.VideoCapture('3.mp4')
 kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
 
 # fgbg = cv2.createBackgroundSubtractorGMG()
@@ -38,7 +38,8 @@ while(1):
     # This will make the lines thicker which will help fit the Hough lines better | This is practically not working
     # edges = cv2.dilate(edges,kernel,iterations = 1)
     
-    lines = cv2.HoughLines(edges,1,np.pi/180,100) # last param is the threshold
+    lines = cv2.HoughLines(edges,1,np.pi/180,150) # last param is the threshold
+    circles = cv2.HoughCircles(edges, cv2.HOUGH_GRADIENT, 1.2, 100)
 
     if lines is not None:
         for line in lines:
@@ -54,6 +55,18 @@ while(1):
 
                 # now the line is generated on to the original colored frame
                 cv2.line(frame,(x1,y1),(x2,y2),(255,0,0),2)
+
+    # if circles is not None:
+    #     circles = np.round(circles[0, :]).astype("int")
+    #     for (x, y, r) in circles:
+    #         # draw the circle in the output image, then draw a rectangle
+    #         # corresponding to the center of the circle
+    #         cv2.circle(frame, (x, y), r, (0, 255, 0), 4)
+            
+    #         #rectangle for center
+    #         #cv2.rectangle(frame, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
+
+
 
     cv2.imshow('frame',frame)
     k = cv2.waitKey(1) & 0xff
