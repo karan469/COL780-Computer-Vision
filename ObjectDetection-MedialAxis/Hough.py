@@ -3,7 +3,7 @@
 
 import numpy as np
 import cv2
-cap = cv2.VideoCapture('3.mp4')
+cap = cv2.VideoCapture('8.mp4')
 kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
 
 # fgbg = cv2.createBackgroundSubtractorGMG()
@@ -17,6 +17,10 @@ dilateKernel = np.ones((7,1),np.uint8)
 
 thetaPrev = 0
 
+# fourcc = cv2.VideoWriter_fourcc(*'XVID')
+frame_width = int(cap.get(3))
+frame_height = int(cap.get(4))
+out = cv2.VideoWriter('output.avi', cv2.VideoWriter_fourcc('M','J','P','G'), 20, (frame_width,frame_height))
 while(1):
     ret, frame = cap.read()
     skel = np.zeros(frame.shape,np.uint8)
@@ -63,11 +67,15 @@ while(1):
                 # now the line is generated on to the original colored frame
                 cv2.line(frame,(x1,y1),(x2,y2),(255,40,10),2)
 
+    # frame_flip = cv2.flip(frame,0)
+    out.write(frame)
     cv2.imshow('frame',frame)
     k = cv2.waitKey(1) & 0xff
     if k == 27:
         break
+
 cap.release()
+out.release()
 cv2.destroyAllWindows()
 
 # How to retain edges in every frame,since all frames are different - Done by a,b,c,d
