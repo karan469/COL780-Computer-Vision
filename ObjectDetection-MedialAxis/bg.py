@@ -10,7 +10,7 @@ def bound(Min, Max, v):
         v = Max
     return v
 
-cap = cv2.VideoCapture('5.mp4')
+cap = cv2.VideoCapture('1.mp4')
 kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
 
 # fgbg = cv2.createBackgroundSubtractorGMG()
@@ -19,6 +19,8 @@ kernel = np.ones((3,3),np.uint8)/9
 
 rhoPrev = 0
 thetaPrev = 0
+flag_start = False
+flag_start2 = False
 while(True):
         ret, frame = cap.read()
         if ret == True:
@@ -40,7 +42,7 @@ while(True):
             if linesP is not None:
                 for line in linesP:
                     for x1,y1,x2,y2 in line:
-                        #cv2.line(frame, (x1,y1), (x2,y2), (255,0,0), 2)
+                        # cv2.line(frame, (x1,y1), (x2,y2), (255,0,0), 2)
                         if max(x1,x2)>xmax:
                             xmax = max(x1,x2)
                         if max(y1,y2)>ymax:
@@ -54,6 +56,8 @@ while(True):
             rhoAvg = 0
             thetaAvg = 0
             if linesP is not None:
+                flag_start2 = flag_start 
+                flag_start = True
                 for lineP in linesP:
                     count = 0
                     for x1,y1,x2,y2 in lineP:
@@ -68,11 +72,17 @@ while(True):
                         rhoAvg = (rho + rhoAvg*count)/(count+1)
                         # cv2.line(frame, (x1,y1), (x2,y2), (255,0,0), 2)
                     count += 1
-            if itr!=0:
-                if(abs(rhoPrev - rhoAvg) > 2):
-                    rhoAvg = (rhoPrev + rhoAvg)/2;
-                if(abs(thetaPrev - thetaAvg) > 5):
-                    thetaAvg = (thetaPrev + thetaAvg)/2;
+            else:
+                if flag_start == True:
+                    rhoAvg = rhoPrev
+                    thetaAvg = thetaPrev
+
+            if  flag_start2 == True:
+            	if rhoPrev != 0 and thetaPrev != 0:
+	                if(abs(rhoPrev - rhoAvg) > 2):
+	                    rhoAvg = (rhoPrev + rhoAvg)/2;
+	                if(abs(thetaPrev - thetaAvg) > 5):
+	                    thetaAvg = (thetaPrev + thetaAvg)/2;
             rhoPrev = rhoAvg
             thetaPrev = thetaAvg
 
