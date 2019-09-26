@@ -1,0 +1,1 @@
+ python image_stitching_simple.py --images images/scottsdale --output output.png
