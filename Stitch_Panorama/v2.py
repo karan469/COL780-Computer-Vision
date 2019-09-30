@@ -16,7 +16,7 @@ def multiplyMatrix(X,Y):
 
 # allImages = ['./dir1/214.jpg','./dir1/213.jpg','./dir1/212.jpg']
 # allImages = ['./dir2/14.jpeg','./dir2/13.jpeg','./dir2/11.jpeg']
-allImages = ['./4.jpg','./3.jpg','./2.jpg', './1.jpg']
+allImages = ['./dir2/4.jpg','./dir2/3.jpg','./dir2/2.jpg', './dir2/1.jpg']
 
 imgreads = []
 for singleImg in allImages:
@@ -77,7 +77,7 @@ for i in range(0, len(imgreads)-1):
 ded[0:imgreads[len(imgreads)-1].shape[0], 0:imgreads[len(imgreads)-1].shape[1]] = imgreads[len(imgreads)-1]
 plt.subplot(122),plt.imshow(ded),plt.title('Warped Image')
 
-cv2.imwrite('./dir1/dir1output.jpg',dst[len(dst)-1])
+cv2.imwrite('./dir2/dir1output.jpg',dst[len(dst)-1])
 plt.imshow(ded)
 plt.show()
 

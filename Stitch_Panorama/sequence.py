@@ -25,7 +25,7 @@ def find_avg(list):
 	return avg_dist
 
 
-orb = cv2.ORB_create(nfeatures = 100000, scoreType=cv2.ORB_FAST_SCORE) # Initiate SIFT detector
+orb = cv2.ORB_create(nfeatures = 10000, scoreType=cv2.ORB_FAST_SCORE) # Initiate SIFT detector
 
 print("Enter the image folder name: ")
 images = load_images_from_folder(str(input()))
@@ -129,8 +129,8 @@ def neighbour(matches, ind1, ind2):
         for m in mask:
             if m==1:
                 count +=1
-        print(ind1," ",ind2," ", (count/(len(good)-count)))
-        return (count/(len(good)-count))
+        print(ind1," ",ind2," ", (count/(len(good)-count+0.0001)))
+        return (count/(len(good)-count+0.0001))
     return 0
         # matchesMask = mask.ravel().tolist()
 
@@ -302,22 +302,5 @@ while images_right[i_next]!=-1:
 	i_next = images_right[i_next]
 	sorted_images.append(images[i_next])
 	# print(i_next)
-## now we have an ordered array of images in sorted_images
-
-# index=0
-# for descripter in des:
-# 	match_id = find_neigh()
-# 	index +=1
-
-# findHomography_(img1, img2)
-###################################################################################################################################
-
-
-cv2.waitKey();cv2.destroyAllWindows()
-
-# draw only keypoints location,not size and orientation
-# img1_new = cv2.drawKeypoints(img1,kp1,img1,color=(0,255,0), flags=0)
-# img2_new = cv2.drawKeypoints(img2,kp2,img2,color=(255,0,0), flags=0)
-
-# plt.imshow(img1_new),plt.show()
-# plt.imshow(img2_new),plt.show()
+sorted_images.reverse()
+print(sorted_images)

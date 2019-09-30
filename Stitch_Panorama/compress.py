@@ -10,7 +10,10 @@ inn = glob.glob(inn)
 
 for i in range(0,len(inn)):
 	image = Image.open(inn[i])
+	# newImage = image.resize(image.size)
 	newImage = image.resize(image.size)
-	newImage.save(user_input + inn[i].split(user_input)[1].split('.jpg')[0] + 'new' + '.jpg')
+	newImage = image.resize(image.size)
+	newImage = image.resize((image.size[0]/3,image.size[1]/3))
+	newImage.save(user_input + inn[i].split(user_input)[1].split('.jpg')[0] + '.jpg')
 	print(image.size)
 print(inn)
