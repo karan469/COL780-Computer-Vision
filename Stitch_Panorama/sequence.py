@@ -110,8 +110,8 @@ def neighbour(matches, ind1, ind2):
     index1 = 0
     for m, n in matches:
         if m.distance < 0.6*n.distance:
-            good.append(m)
-            good_index[index1] = 1
+        	good.append(m)	
+        good_index[index1] = 1
         index1 +=1
 
     threshold = 10
@@ -141,8 +141,8 @@ def neighbour(matches, ind1, ind2):
 # 	i +=1
 
 
-match = bf.knnMatch(des[2],des[3],k=2)
-print(neighbour(match,2,3))
+# match = bf.knnMatch(des[2],des[3],k=2)
+# print(neighbour(match,2,3))
 
 # sorted_images = images
 images_left = [-1]*len(images)
@@ -169,9 +169,9 @@ def find_right(index):
 				images_right[index] = max_index
 				images_left[max_index] = index
 			else:
-				print("max left of: ",index," is ", max_index)
-				images_left[index] = max_index
-				images_right[max_index] = index
+				# print("max left of: ",index," is ", max_index)
+				# images_left[index] = max_index
+				# images_right[max_index] = index
 				max_match=3
 				max_index=-1
 				j=0
@@ -225,9 +225,9 @@ def find_left(index):
 				images_left[index] = max_index
 				images_right[max_index] = index
 			else:
-				print("max right of: ",index," is ", max_index)
-				images_right[index] = max_index
-				images_left[max_index] = index
+				# print("max right of: ",index," is ", max_index)
+				# images_right[index] = max_index
+				# images_left[max_index] = index
 				max_match=3
 				max_index=-1
 				j=0
