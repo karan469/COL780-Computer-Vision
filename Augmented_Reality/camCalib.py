@@ -13,25 +13,65 @@ objp[:,:2] = np.mgrid[0:7,0:6].T.reshape(-1,2)
 objpoints = [] # 3d point in real world space
 imgpoints = [] # 2d points in image plane.
 
-images = glob.glob('*.jpg')
+images = glob.glob('Images/p4.jpg')
 
 for fname in images:
     img = cv2.imread(fname)
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
     # Find the chess board corners
-    ret, corners = cv2.findChessboardCorners(gray, (7,6),None)
+    ret, corners = cv2.findChessboardCorners(gray, (7,6),None)			#change parameters here
+    # print('ytueb')
 
     # If found, add object points, image points (after refining them)
     if ret == True:
         objpoints.append(objp)
-
-        corners2 = cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
+        print('true')
+        corners2 = cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)  
         imgpoints.append(corners2)
 
         # Draw and display the corners
-        img = cv2.drawChessboardCorners(img, (7,6), corners2,ret)
+        img = cv2.drawChessboardCorners(img, (7,6), corners2,ret)    #change parameters here
         cv2.imshow('img',img)
         cv2.waitKey(500)
 
 cv2.destroyAllWindows()
+
+ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)
+
+# print(ret)
+# print(mtx)
+# print(dist)
+# print(rvecs)
+# print(tvecs)
+
+# f= open("cameraCalibration.txt","w+")
+# f.write(ret)
+# f.write(mtx,"\n")
+# f.write(dist,"\n")
+# f.write(rvecs,"\n")
+# f.write(tvecs,"\n")
+# f.close()
+
+img = cv2.imread('Images/left12.jpg')
+h,  w = img.shape[:2]
+newcameramtx, roi=cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),1,(w,h))
+
+# undistort
+dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
+
+# crop the image
+x,y,w,h = roi
+dst = dst[y:y+h, x:x+w]
+cv2.imwrite('calibresult.png',dst)
+cv2.imshow('img',img)
+
+
+# undistort
+mapx,mapy = cv2.initUndistortRectifyMap(mtx,dist,None,newcameramtx,(w,h),5)
+dst = cv2.remap(img,mapx,mapy,cv2.INTER_LINEAR)
+
+# crop the image
+x,y,w,h = roi
+dst = dst[y:y+h, x:x+w]
+cv2.imwrite('calibresult.png',dst)
