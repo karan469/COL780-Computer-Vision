@@ -8,7 +8,7 @@ import pygame
 import argparse
 import math
 
-MIN_MATCHES = 5
+MIN_MATCHES = 10
 
 parser = argparse.ArgumentParser(description='Augmented reality application')
 
@@ -20,13 +20,6 @@ parser.add_argument('-ma','--matches', help = 'draw matches between keypoints', 
 args = parser.parse_args()
 
 def render(img, obj, projection, model, color=False):
-    """
-    Render a loaded obj model into the current video frame
-    """
-
-    # axis2 = np.float32([[0,0,0], [0,3,0], [3,3,0], [3,0,0],
-    #                [0,0,-3],[0,3,-3],[3,3,-3],[3,0,-3] ])
-
     vertices = obj.vertices
     scale_matrix = np.eye(3) * 1
     h, w = model.shape
@@ -85,20 +78,9 @@ cv2.destroyAllWindows()
 
 ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1],None,None)
 
-# print(ret)
-# print(mtx)
-# print(dist)
-# print(rvecs)
-# print(tvecs)
-
-##############################################################################################################################
-
-
 img = cv2.imread('Images/p5.jpg')
 h,  w = img.shape[:2]
 newcameramtx, roi=cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),1,(w,h))
-# print('optimized')
-# undistort
 dst = cv2.undistort(img, mtx, dist, None, newcameramtx)
 
 # crop the image
@@ -107,8 +89,6 @@ dst = dst[y:y+h, x:x+w]
 cv2.imwrite('calibresult.png',dst)
 cv2.imshow('img',img)
 cv2.waitKey(1000)
-
-# print(dst)
 
 # undistort
 mapx,mapy = cv2.initUndistortRectifyMap(mtx,dist,None,newcameramtx,(w,h),5)
@@ -185,30 +165,33 @@ def projection_matrix(camera_parameters, homography):
 #-------------------------------------------------------------------------------------
 
 homography = None 
-# orb = cv2.ORB_create()
-orb = cv2.ORB_create(nfeatures = 1000, scoreType=cv2.ORB_FAST_SCORE) # Initiate SIFT detector
-orb.setPatchSize(70);
-# create BFMatcher object based on hamming distance  
+orb = cv2.ORB_create(nfeatures = 1000000, scoreType=cv2.ORB_FAST_SCORE) # Initiate SIFT detector
+orb.setPatchSize(80);
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-# load the reference surface that will be searched in the video stream
 dir_name = os.getcwd()
 model = cv2.imread(os.path.join(dir_name, 'model.png'), 0)
-# Compute model keypoints and its descriptors
 kp_model, des_model = orb.detectAndCompute(model, None)
-# Load 3D model from OBJ file
 obj = OBJ(os.path.join(dir_name, 'models/wolf.obj'), swapyz=True)
-# print(obj)
+
+#-----------------------FRAME READ---------------------------------------------
 while(cap.isOpened()):
     ret, frame = cap.read()
     if ret == False:
         break
 
+    dst = cv2.undistort(frame, mtx, dist, None, newcameramtx)
+
+    # crop the image
+    x,y,w,h = roi
+    frame = dst[y:y+h, x:x+w]
+    # cv2.imwrite('calibresult.png',frame)
+
     #---------------------------WITHOUT CALIB FUNC-----------------------------------------------
     kp_frame, des_frame = orb.detectAndCompute(frame, None)
+    # print(kp_frame[0].pt)
     # match frame descriptors with model descriptors
     matches = bf.match(des_model, des_frame)
-    # sort them in the order of their distance
-    # the lower the distance, the better the match
+    # print(matches)
     matches = sorted(matches, key=lambda x: x.distance)
 
     # compute Homography if enough matches are found
@@ -218,10 +201,7 @@ while(cap.isOpened()):
         dst_pts = np.float32([kp_frame[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
         # compute Homography
         homography, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-        print(homography)
-
         if args.rectangle:
-            # Draw a rectangle that marks the found model in the frame
             h, w = model.shape
             pts = np.float32([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
             # project corners into frame
@@ -231,15 +211,16 @@ while(cap.isOpened()):
         # if a valid homography matrix was found render cube on model plane
         if homography is not None:
             print("homography not none")
-            
-            # obtain 3D projection matrix from homography matrix and camera parameters
-            projection = projection_matrix(mtx, homography)  
-            print("A")
-            print(projection)
-            # project cube or model
-            frame = render(frame, obj, projection, model, False)
-            #frame = render(frame, model, projection)
+            try:
+                # obtain 3D projection matrix from homography matrix and camera parameters
+                projection = projection_matrix(mtx, homography)  
+                print(projection)
 
+                frame = render(frame, obj, projection, model, False)
+                #frame = render(frame, model, projection)
+            except:
+                print("B")
+                pass
         # draw first 10 matches.
         if args.matches:
             frame = cv2.drawMatches(model, kp_model, frame, kp_frame, matches[:10], 0, flags=2)
