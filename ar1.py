@@ -6,6 +6,7 @@ from obj_loader import *
 from OpenGL.GL import *
 import pygame
 import argparse
+import math
 
 MIN_MATCHES = 10
 
@@ -22,8 +23,12 @@ def render(img, obj, projection, model, color=False):
     """
     Render a loaded obj model into the current video frame
     """
+
+    # axis2 = np.float32([[0,0,0], [0,3,0], [3,3,0], [3,0,0],
+    #                [0,0,-3],[0,3,-3],[3,3,-3],[3,0,-3] ])
+
     vertices = obj.vertices
-    scale_matrix = np.eye(3) * 3
+    scale_matrix = np.eye(3) * 1
     h, w = model.shape
 
     for face in obj.faces:
@@ -150,6 +155,35 @@ axis2 = np.float32([[0,0,0], [0,3,0], [3,3,0], [3,0,0],
 cap = cv2.VideoCapture('video1.webm')
 # ret, frame = cap.read()
 
+#-----------------------------RENDER FUNC----------------------------------------------
+def projection_matrix(camera_parameters, homography):
+    """
+     From the camera calibration matrix and the estimated homography
+     compute the 3D projection matrix
+     """
+    # Compute rotation along the x and y axis as well as the translation
+    homography = homography * (-1)
+    rot_and_transl = np.dot(np.linalg.inv(camera_parameters), homography)
+    col_1 = rot_and_transl[:, 0]
+    col_2 = rot_and_transl[:, 1]
+    col_3 = rot_and_transl[:, 2]
+    # normalise vectors
+    l = math.sqrt(np.linalg.norm(col_1, 2) * np.linalg.norm(col_2, 2))
+    rot_1 = col_1 / l
+    rot_2 = col_2 / l
+    translation = col_3 / l
+    # compute the orthonormal basis
+    c = rot_1 + rot_2
+    p = np.cross(rot_1, rot_2)
+    d = np.cross(c, p)
+    rot_1 = np.dot(c / np.linalg.norm(c, 2) + d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
+    rot_2 = np.dot(c / np.linalg.norm(c, 2) - d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
+    rot_3 = np.cross(rot_1, rot_2)
+    # finally, compute the 3D projection matrix from the model to the current frame
+    projection = np.stack((rot_1, rot_2, rot_3, translation)).T
+    return np.dot(camera_parameters, projection)
+#-------------------------------------------------------------------------------------
+
 homography = None 
 orb = cv2.ORB_create()
 # create BFMatcher object based on hamming distance  
@@ -161,7 +195,7 @@ model = cv2.imread(os.path.join(dir_name, 'model.jpg'), 0)
 kp_model, des_model = orb.detectAndCompute(model, None)
 # Load 3D model from OBJ file
 obj = OBJ(os.path.join(dir_name, 'models/wolf.obj'), swapyz=True)
-
+# print(obj)
 while(cap.isOpened()):
     ret, frame = cap.read()
     if ret == False:
@@ -182,7 +216,7 @@ while(cap.isOpened()):
         dst_pts = np.float32([kp_frame[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
         # compute Homography
         homography, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-        # print(homography)
+        print(homography)
 
         if args.rectangle:
             # Draw a rectangle that marks the found model in the frame
@@ -194,16 +228,16 @@ while(cap.isOpened()):
             frame = cv2.polylines(frame, [np.int32(dst)], True, 255, 3, cv2.LINE_AA)  
         # if a valid homography matrix was found render cube on model plane
         if homography is not None:
-            # print("homography not none")
-            try:
-                # obtain 3D projection matrix from homography matrix and camera parameters
-                projection = projection_matrix(mtx, homography)  
-                print(projection)
-                # project cube or model
-                frame = render(frame, obj, projection, model, False)
-                #frame = render(frame, model, projection)
-            except:
-                pass
+            print("homography not none")
+            
+            # obtain 3D projection matrix from homography matrix and camera parameters
+            projection = projection_matrix(mtx, homography)  
+            print("A")
+            print(projection)
+            # project cube or model
+            frame = render(frame, obj, projection, model, False)
+            #frame = render(frame, model, projection)
+
         # draw first 10 matches.
         if args.matches:
             frame = cv2.drawMatches(model, kp_model, frame, kp_frame, matches[:10], 0, flags=2)
@@ -240,29 +274,4 @@ while(cap.isOpened()):
 cap.release()
 cv2.destroyAllWindows()
 
-def projection_matrix(camera_parameters, homography):
-    """
-     From the camera calibration matrix and the estimated homography
-     compute the 3D projection matrix
-     """
-    # Compute rotation along the x and y axis as well as the translation
-    homography = homography * (-1)
-    rot_and_transl = np.dot(np.linalg.inv(camera_parameters), homography)
-    col_1 = rot_and_transl[:, 0]
-    col_2 = rot_and_transl[:, 1]
-    col_3 = rot_and_transl[:, 2]
-    # normalise vectors
-    l = math.sqrt(np.linalg.norm(col_1, 2) * np.linalg.norm(col_2, 2))
-    rot_1 = col_1 / l
-    rot_2 = col_2 / l
-    translation = col_3 / l
-    # compute the orthonormal basis
-    c = rot_1 + rot_2
-    p = np.cross(rot_1, rot_2)
-    d = np.cross(c, p)
-    rot_1 = np.dot(c / np.linalg.norm(c, 2) + d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
-    rot_2 = np.dot(c / np.linalg.norm(c, 2) - d / np.linalg.norm(d, 2), 1 / math.sqrt(2))
-    rot_3 = np.cross(rot_1, rot_2)
-    # finally, compute the 3D projection matrix from the model to the current frame
-    projection = np.stack((rot_1, rot_2, rot_3, translation)).T
-    return np.dot(camera_parameters, projection)
+
