@@ -8,7 +8,7 @@ import pygame
 import argparse
 import math
 
-MIN_MATCHES = 10
+MIN_MATCHES = 5
 
 parser = argparse.ArgumentParser(description='Augmented reality application')
 
@@ -152,7 +152,7 @@ axis1 = np.float32([[3,0,0], [0,3,0], [0,0,-3]]).reshape(-1,3)
 axis2 = np.float32([[0,0,0], [0,3,0], [3,3,0], [3,0,0],
                    [0,0,-3],[0,3,-3],[3,3,-3],[3,0,-3] ])
 
-cap = cv2.VideoCapture('video1.webm')
+cap = cv2.VideoCapture(0)
 # ret, frame = cap.read()
 
 #-----------------------------RENDER FUNC----------------------------------------------
@@ -185,12 +185,14 @@ def projection_matrix(camera_parameters, homography):
 #-------------------------------------------------------------------------------------
 
 homography = None 
-orb = cv2.ORB_create()
+# orb = cv2.ORB_create()
+orb = cv2.ORB_create(nfeatures = 1000, scoreType=cv2.ORB_FAST_SCORE) # Initiate SIFT detector
+orb.setPatchSize(70);
 # create BFMatcher object based on hamming distance  
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 # load the reference surface that will be searched in the video stream
 dir_name = os.getcwd()
-model = cv2.imread(os.path.join(dir_name, 'model.jpg'), 0)
+model = cv2.imread(os.path.join(dir_name, 'model.png'), 0)
 # Compute model keypoints and its descriptors
 kp_model, des_model = orb.detectAndCompute(model, None)
 # Load 3D model from OBJ file
