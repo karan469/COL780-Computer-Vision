@@ -8,7 +8,7 @@ import pygame
 import argparse
 import math
 
-MIN_MATCHES = 10
+MIN_MATCHES = 12
 
 parser = argparse.ArgumentParser(description='Augmented reality application')
 
@@ -21,7 +21,7 @@ args = parser.parse_args()
 
 def render(img, obj, projection, model, color=False):
     vertices = obj.vertices
-    scale_matrix = np.eye(3) * 1
+    scale_matrix = np.eye(3) * 0.5
     h, w = model.shape
 
     for face in obj.faces:
@@ -149,7 +149,7 @@ def projection_matrix(camera_parameters, homography):
     rot_1 = col_1 / l
     rot_2 = col_2 / l
     translation = col_3 / l
-    print(translation)
+    # print(translation)
     # compute the orthonormal basis
     c = rot_1 + rot_2
     p = np.cross(rot_1, rot_2)
@@ -159,19 +159,20 @@ def projection_matrix(camera_parameters, homography):
     rot_3 = np.cross(rot_1, rot_2)
     # finally, compute the 3D projection matrix from the model to the current frame
     projection = np.stack((rot_1, rot_2, rot_3, translation)).T
-    return np.dot(camera_parameters, projection)
+    # return np.dot(camera_parameters, projection)
+    return camera_parameters, projection
 #-------------------------------------------------------------------------------------
 
-frame = cv2.imread('Part4/marker.png')
+frame = cv2.imread('Part4/marker3.png')
 # ret, frame = cap.read()
 
 homography = None 
-orb = cv2.ORB_create(nfeatures = 1000000, scoreType=cv2.ORB_FAST_SCORE) # Initiate SIFT detector
-orb.setPatchSize(50);
+orb = cv2.ORB_create(nfeatures = 100000, scoreType=cv2.ORB_FAST_SCORE) # Initiate SIFT detector
+orb.setPatchSize(80);
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 dir_name = os.getcwd()
-model1 = cv2.imread(os.path.join(dir_name, 'Part4/img2.png'), 0)
-model2 = cv2.imread(os.path.join(dir_name, 'Part4/img1.png'), 0)
+model1 = cv2.imread(os.path.join(dir_name, 'Part4/img1.png'), 0)
+model2 = cv2.imread(os.path.join(dir_name, 'Part4/img2.png'), 0)
 
 kp_model1, des_model1 = orb.detectAndCompute(model1, None)
 kp_model2, des_model2 = orb.detectAndCompute(model2, None)
@@ -226,44 +227,51 @@ if (len(matches1) > MIN_MATCHES) and (len(matches2) > MIN_MATCHES):
     # if a valid homography matrix was found render cube on model plane
         # img2 = cv2.polylines(frame, [np.int32(dst1)], True, 255, 3, cv2.LINE_AA) 
     count = 0
+    flag = True
+    frame_copy = None
     while(True):
-        frame_copy = frame
+        frame_copy = cv2.imread('Part4/marker4.jpg')
         if (homography1 is not None) and (homography2 is not None):
-            if count==10:
+            if count==80 or flag==False:
                 break
             print("homography1 not none ",count)
             try:
                 # obtain 3D projection matrix from homography matrix and camera parameters
-                projection1 = projection_matrix(mtx, homography1)
-                projection2 = projection_matrix(mtx, homography2)
+                cam_para1, projection1 = projection_matrix(mtx, homography1)
+                cam_para2, projection2 = projection_matrix(mtx, homography2)
                 print(projection1)
                 print('\n')
                 print(projection2)
                 print('\n')
-                projection = projection1
                 for i in range(3):
                     # vect = []
                     for j in range(4):
                         if j==3:
-                            projection1[i][j] = (projection1[i][3] + ((projection2[i][3] - projection1[i][3])/10)*count)
-                        # else:
-                        #     projection[i][j] = (projection1[i][j])
-                #     # projection.append(vect)
+                            projection1[i][j] = (projection1[i][3] + ((projection2[i][3] - projection1[i][3])/100)*count)
+                            # if projection1[i][j]>projection2[i][3]-50:
+                            #     print('break')
+                            #     flag=False
+                            # projection1[i][j] = projection2[i][3]
+
+                        else:
+                            projection1[i][j] = (projection1[i][j])
+                    # projection.append(vect)
 
                 # projection[0][3] =  projection[0][3] + ((projection2[0][3] - projection1[0][3])/10)
                 # projection[1][3] += ((projection2[1][3] - projection1[1][3])/10)
                 # projection[2][3] += ((projection2[2][3] - projection1[2][3])/10)
                 # print(projection[0][3] + ((projection2[0][3] - projection1[0][3])/10))
                 # projection1[0][3] = projection1[0][3] + 100000
-                print(projection1)
+                # print(projection1)
+                projection = np.dot(cam_para1, projection1)
                 print('\n')
 
 
                 # print(projection1[0][3],"   ", projection2[0][3])
 
-                frame_copy = render(frame_copy, obj, projection1, model1, False)
+                frame_copy = render(frame_copy, obj, projection, model1, False)
                 count +=1
-                # frame = render(frame, model, projection)
+                # frame_copy = render(frame_copy, model, projection)
             except:
                 print("B")
                 pass
@@ -281,7 +289,8 @@ if (len(matches1) > MIN_MATCHES) and (len(matches2) > MIN_MATCHES):
         # cv2.waitKey(0)
         # show result
         cv2.imshow('frame', frame_copy)
-        cv2.waitKey(1000)
+        cv2.waitKey(100)
+        frame_copy = None
     # if cv2.waitKey(1) & 0xFF == ord('q'):
     #     break
 
