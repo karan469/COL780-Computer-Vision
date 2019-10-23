@@ -6,6 +6,7 @@ from obj_loader import *
 from OpenGL.GL import *
 import pygame
 import argparse
+# from MyDenoise import MyDenoise
 import math
 
 MIN_MATCHES = 10
@@ -166,18 +167,39 @@ def projection_matrix(camera_parameters, homography):
 
 homography = None 
 orb = cv2.ORB_create(nfeatures = 1000000, scoreType=cv2.ORB_FAST_SCORE) # Initiate SIFT detector
-orb.setPatchSize(80);
+# orb.setFastThreshold(0)
+orb.setPatchSize(65);
 bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 dir_name = os.getcwd()
 model = cv2.imread(os.path.join(dir_name, 'model.png'), 0)
 kp_model, des_model = orb.detectAndCompute(model, None)
 obj = OBJ(os.path.join(dir_name, 'models/wolf.obj'), swapyz=True)
+# ------------------------------------------------------------------------
+def ToGrayImage(img):
+	gray_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+	return gray_image
+
+
+
+def MyDenoiseSobely(img):
+	# img_gray = ToGrayImage(img)
+	# img_mydenoise = MyDenoise(img,5)
+	img_denoise = cv2.fastNlMeansDenoising(img,None,3,7,21)
+	_,img_thre = cv2.threshold(img_denoise,100,255,cv2.THRESH_TOZERO)
+	sobely = cv2.Sobel(img_thre,cv2.CV_64F,0,1,ksize=3)
+	return sobely 
+
 
 #-----------------------FRAME READ---------------------------------------------
+# prevMatch = [1]
+# fg = -1
 while(cap.isOpened()):
     ret, frame = cap.read()
     if ret == False:
         break
+
+    frame = cv2.fastNlMeansDenoisingColored(frame,None,10,10,7,21)
+    # frame = MyDenoiseSobely(frame)
 
     dst = cv2.undistort(frame, mtx, dist, None, newcameramtx)
 
@@ -194,13 +216,19 @@ while(cap.isOpened()):
     # print(matches)
     matches = sorted(matches, key=lambda x: x.distance)
 
+    # if abs(len(prevMatch)-len(matches))>2 and fg==1:
+    # 	matches = prevMatch
+    # if fg == -1:
+    # 	fg = 1
+
     # compute Homography if enough matches are found
     if len(matches) > MIN_MATCHES:
+    	# print(len(matches))
         # differenciate between source points and destination points
         src_pts = np.float32([kp_model[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
         dst_pts = np.float32([kp_frame[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
         # compute Homography
-        homography, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+        homography, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 10.0)
         if args.rectangle:
             h, w = model.shape
             pts = np.float32([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
@@ -210,11 +238,11 @@ while(cap.isOpened()):
             frame = cv2.polylines(frame, [np.int32(dst)], True, 255, 3, cv2.LINE_AA)  
         # if a valid homography matrix was found render cube on model plane
         if homography is not None:
-            print("homography not none")
+            # print("homography not none")
             try:
                 # obtain 3D projection matrix from homography matrix and camera parameters
                 projection = projection_matrix(mtx, homography)  
-                print(projection)
+                # print(projection)
 
                 frame = render(frame, obj, projection, model, False)
                 #frame = render(frame, model, projection)
@@ -232,6 +260,7 @@ while(cap.isOpened()):
     else:
         print "Not enough matches found - %d/%d" % (len(matches), MIN_MATCHES)
     #--------------------------------------------------------------------------
+    # prevMatch = matches
 
     # gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
     # ret, corners = cv2.findChessboardCorners(gray, (7,7),None)
