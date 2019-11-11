@@ -1,6 +1,3 @@
-# Ive used all frames of video for generating training or testing data | Take 10th frame or so
-# FAST_RUN should be true since we have small no. of data | Meaning: less no. of epochs
-# Ensure shuffling of testing data
 import numpy as np
 import pandas as pd 
 from keras.preprocessing.image import ImageDataGenerator, load_img
@@ -16,14 +13,18 @@ IMAGE_HEIGHT=50
 IMAGE_SIZE=(IMAGE_WIDTH, IMAGE_HEIGHT)
 IMAGE_CHANNELS=3
 
-filenames = os.listdir("./train")
+filenames = os.listdir("./data/train")
 categories = []
 for filename in filenames:
     category = filename.split('.')[0]
     if category == 'next':
         categories.append(1)
-    else:
-        categories.append(0)
+    elif category == 'prev':
+        categories.append(2)
+    elif category == 'pause':
+        categories.append(3)
+    elif category == 'others':
+        categories.append(4)
 
 df = pd.DataFrame({
     'filename': filenames,
@@ -33,7 +34,7 @@ df.head()
 df.tail()
 df['category'].value_counts().plot.bar()
 sample = random.choice(filenames)
-image = load_img("./train/"+sample)
+image = load_img("./data/train/"+sample)
 plt.imshow(image)
 
 from keras.models import Sequential
@@ -82,8 +83,8 @@ model.add(Dropout(0.5))
 model.add(Dense(2)) 
 model.add(Activation('sigmoid')) 
 
-# model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
-model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
+# model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
 
 
 model.summary()
@@ -122,7 +123,7 @@ train_datagen = ImageDataGenerator(
 
 train_generator = train_datagen.flow_from_dataframe(
     train_df, 
-    "./train/", 
+    "./data/train/", 
     x_col='filename',
     y_col='category',
     target_size=IMAGE_SIZE,
@@ -133,7 +134,7 @@ train_generator = train_datagen.flow_from_dataframe(
 validation_datagen = ImageDataGenerator(rescale=1./255)
 validation_generator = validation_datagen.flow_from_dataframe(
     validate_df, 
-    "./train/", 
+    "./data/train/", 
     x_col='filename',
     y_col='category',
     target_size=IMAGE_SIZE,
@@ -178,7 +179,7 @@ legend = plt.legend(loc='best', shadow=True)
 plt.tight_layout()
 # plt.show()
 
-test_filenames = os.listdir('./test1')
+test_filenames = os.listdir('./data/test1')
 test_df = pd.DataFrame({
     'filename': test_filenames
 })
