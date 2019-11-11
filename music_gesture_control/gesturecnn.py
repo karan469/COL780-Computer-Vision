@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
+
 import numpy as np
 import pandas as pd 
 from keras.preprocessing.image import ImageDataGenerator, load_img
@@ -13,7 +19,11 @@ IMAGE_HEIGHT=50
 IMAGE_SIZE=(IMAGE_WIDTH, IMAGE_HEIGHT)
 IMAGE_CHANNELS=3
 
-filenames = os.listdir("./data/train")
+
+# In[2]:
+
+
+filenames = os.listdir("./train")
 categories = []
 for filename in filenames:
     category = filename.split('.')[0]
@@ -26,19 +36,31 @@ for filename in filenames:
     elif category == 'others':
         categories.append(4)
 
+
+# In[5]:
+
+
 df = pd.DataFrame({
     'filename': filenames,
     'category': categories
 })
-df.head()
+print(df.head(20))
 df.tail()
 df['category'].value_counts().plot.bar()
 sample = random.choice(filenames)
-image = load_img("./data/train/"+sample)
+image = load_img("./train/"+sample)
 plt.imshow(image)
+
+
+# In[6]:
+
 
 from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense, Activation, BatchNormalization
+
+
+# In[15]:
+
 
 model = Sequential()
 
@@ -80,7 +102,7 @@ model.add(Flatten())
 model.add(Dense(64)) 
 model.add(Activation('relu')) 
 model.add(Dropout(0.5)) 
-model.add(Dense(2)) 
+model.add(Dense(4)) 
 model.add(Activation('sigmoid')) 
 
 model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
@@ -88,6 +110,10 @@ model.compile(loss='categorical_crossentropy', optimizer='rmsprop', metrics=['ac
 
 
 model.summary()
+
+
+# In[19]:
+
 
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 earlystop = EarlyStopping(patience=10)
@@ -98,7 +124,8 @@ learning_rate_reduction = ReduceLROnPlateau(monitor='val_acc',
                                             min_lr=0.00001)
 
 callbacks = [earlystop, learning_rate_reduction]
-df["category"] = df["category"].replace({0: 'pause', 1: 'next'})
+df["category"] = df["category"].replace({3: 'pause', 1: 'next', 2: 'prev', 4: 'others'})
+
 
 # 2 - cross validation
 train_df, validate_df = train_test_split(df, test_size=0.20, random_state=42)
@@ -109,7 +136,11 @@ train_df['category'].value_counts().plot.bar()
 validate_df['category'].value_counts().plot.bar()
 total_train = train_df.shape[0]
 total_validate = validate_df.shape[0]
-batch_size=30
+batch_size=35
+
+
+# In[20]:
+
 
 train_datagen = ImageDataGenerator(
     rotation_range=15,
@@ -123,7 +154,7 @@ train_datagen = ImageDataGenerator(
 
 train_generator = train_datagen.flow_from_dataframe(
     train_df, 
-    "./data/train/", 
+    "./train/", 
     x_col='filename',
     y_col='category',
     target_size=IMAGE_SIZE,
@@ -134,7 +165,7 @@ train_generator = train_datagen.flow_from_dataframe(
 validation_datagen = ImageDataGenerator(rescale=1./255)
 validation_generator = validation_datagen.flow_from_dataframe(
     validate_df, 
-    "./data/train/", 
+    "./train/", 
     x_col='filename',
     y_col='category',
     target_size=IMAGE_SIZE,
@@ -152,7 +183,11 @@ validation_generator = validation_datagen.flow_from_dataframe(
 # plt.tight_layout()
 # plt.show()
 
-epochs=1 if FAST_RUN else 10
+
+# In[21]:
+
+
+epochs=5 if FAST_RUN else 10
 history = model.fit_generator(
     train_generator, 
     epochs=epochs,
@@ -162,24 +197,52 @@ history = model.fit_generator(
     callbacks=callbacks
 )
 
+
+# In[22]:
+
+
 model.save_weights("model.h5")
 
+
+# In[25]:
+
+
 # visualize training
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 12))
-ax1.plot(history.history['loss'], color='b', label="Training loss")
-ax1.plot(history.history['val_loss'], color='r', label="validation loss")
-ax1.set_xticks(np.arange(1, epochs, 1))
-ax1.set_yticks(np.arange(0, 1, 0.1))
+# fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 12))
+# ax1.plot(history.history['loss'], color='b', label="Training loss")
+# ax1.plot(history.history['val_loss'], color='r', label="validation loss")
+# ax1.set_xticks(np.arange(1, epochs, 1))
+# ax1.set_yticks(np.arange(0, 1, 0.1))
 
-ax2.plot(history.history['accuracy'], color='b', label="Training accuracy")
-ax2.plot(history.history['val_accuracy'], color='r',label="Validation accuracy")
-ax2.set_xticks(np.arange(1, epochs, 1))
+# ax2.plot(history.history['accuracy'], color='b', label="Training accuracy")
+# ax2.plot(history.history['val_accuracy'], color='r',label="Validation accuracy")
+# ax2.set_xticks(np.arange(1, epochs, 1))
 
-legend = plt.legend(loc='best', shadow=True)
-plt.tight_layout()
-# plt.show()
+# legend = plt.legend(loc='best', shadow=True)
+# plt.tight_layout()
+# Plot training & validation accuracy values
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('Model accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
+plt.show()
 
-test_filenames = os.listdir('./data/test1')
+# Plot training & validation loss values
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('Model loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
+plt.show()
+
+
+# In[ ]:
+
+
+test_filenames = os.listdir('./test1')
 test_df = pd.DataFrame({
     'filename': test_filenames
 })
@@ -207,3 +270,10 @@ test_df['category'].value_counts().plot.bar()
 sample_test = test_df.head(18)
 print('------------------Testing Data---------------------')
 print(sample_test)
+
+
+# In[ ]:
+
+
+
+
